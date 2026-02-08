@@ -62,4 +62,4 @@ src/
 
 ## Autores
 
-- Salvador — Desarrollo y documentación
+- Xavi & Voro — Desarrollo y documentación
