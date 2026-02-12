@@ -1,5 +1,5 @@
-# Build stage
-FROM node:18-alpine AS build
+# Build stage (Vite requiere Node 20.19+ o 22.12+)
+FROM node:22-alpine AS build
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ COPY . .
 RUN npm run build
 
 # Production stage
-FROM node:18-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 

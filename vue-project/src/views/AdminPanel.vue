@@ -4,6 +4,7 @@ import { getClientes, getVehiculosByCliente, updateEstadoCliente, ESTADOS_RESOLU
 import SelectField from '../components/SelectField.vue'
 import ButtonPrimary from '../components/ButtonPrimary.vue'
 import ModalConfirm from '../components/ModalConfirm.vue'
+import { enviarNotificacionCambioEstado } from '../services/mailService'
 
 const clientes = ref([])
 const loading = ref(true)
@@ -86,7 +87,10 @@ async function confirmarCambioEstado() {
       mensaje.value = `Estado de ${modalNombre.value} actualizado a "${modalEstadoNuevo.value}"`
       tipoMensaje.value = 'exito'
       const cliente = clientes.value.find(c => c.DNI === modalDNI.value)
-      if (cliente) cliente.Estado = modalEstadoNuevo.value
+      if (cliente) {
+        cliente.Estado = modalEstadoNuevo.value
+        await enviarNotificacionCambioEstado(cliente, modalEstadoNuevo.value)
+      }
     } else {
       mensaje.value = result.error || 'Error al actualizar'
       tipoMensaje.value = 'error'

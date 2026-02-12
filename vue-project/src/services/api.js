@@ -6,6 +6,10 @@
 // La obtienes en: Apps Script → Implementar → Nueva implementación → App web
 const API_URL = 'https://script.google.com/macros/s/AKfycbw3RTM5MsyOPdf6MvMgVMElQUY80pgk3zyYee4wWkVZ78WfKvUxHTZAz05vVqebwSnJ9g/exec';
 
+// Endpoint del backend ligero de email (mismo criterio que en mailService.js)
+const EMAIL_BACKEND_URL = import.meta.env?.DEV
+  ? '/email-api/email/send'
+  : 'http://localhost:4000/email/send';
 // ============================================
 // CLIENTES
 // ============================================
@@ -14,22 +18,63 @@ export async function getClientes() {
   const response = await fetch(`${API_URL}?action=getClientes`);
   return await response.json();
 }
+// ... (Tus constantes arriba igual)
 
-export async function getClienteByDNI(dni) {
-  const response = await fetch(`${API_URL}?action=getCliente&dni=${dni}`);
-  return await response.json();
+async function enviarSimulacionEmail(cliente, asunto) {
+  try {
+    // Normalizamos campos porque en el frontend se usan mayúsculas (DNI, Nombre, Email, ...)
+    const email = cliente.Email || cliente.email || 'desconocido@test.com';
+    const nombre = cliente.Nombre || cliente.nombre || 'Cliente';
+    const dni = cliente.DNI || cliente.dni || 'N/A';
+
+    // Simulación de correo: lo enviamos al backend de email
+    const emailData = {
+      from: "sistema@taller.local",
+      to: email,
+      subject: asunto,
+      text: `Detalles del cliente:\nNombre: ${nombre}\nDNI: ${dni}`
+    };
+
+    try {
+      const resp = await fetch(EMAIL_BACKEND_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(emailData)
+      });
+
+      if (!resp.ok) {
+        console.warn('Backend de email respondió con estado no OK al registrar nuevo cliente:', resp.status);
+      } else {
+        console.log("📧 Simulación de email de alta de cliente enviada vía backend de email", emailData);
+      }
+    } catch (e) {
+      console.warn("No se ha podido contactar con el backend de email al registrar cliente.", e);
+    }
+  } catch (e) {
+    // Silencioso para no molestar al usuario, pero visible para ti en consola
+    console.warn("No se ha podido comunicar con MailHog. ¿Está levantado en localhost:8025?", e);
+  }
 }
 
 export async function addCliente(cliente) {
   const response = await fetch(API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain' }, // Apps Script necesita text/plain
+    headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({
       action: 'addCliente',
       cliente
     })
   });
-  return await response.json();
+  
+  const resultado = await response.json();
+
+  // Cambiamos el orden: primero devolvemos la respuesta al UI 
+  // y disparamos el mail en segundo plano (sin await) para no ralentizar la interfaz
+  if (resultado.status === 'success' || resultado.success) {
+    enviarSimulacionEmail(cliente, "Registro de Nuevo Cliente");
+  }
+
+  return resultado;
 }
 
 export async function updateEstadoCliente(dni, estado) {

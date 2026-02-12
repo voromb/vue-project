@@ -1,22 +1,46 @@
 version: '3.8'
 
 services:
-    vue-app:
-        build:
-            context: .
-            dockerfile: deploy/Dockerfile
-        image: vue-project:latest
-        container_name: vue-app
-        ports:
-            - '3000:3000'
-        environment:
-            - NODE_ENV=production
-        restart: unless-stopped
-        labels:
-            - 'com.dockploy.enabled=true'
-        healthcheck:
-            test: ['CMD', 'curl', '-f', 'http://localhost:3000']
-            interval: 30s
-            timeout: 10s
-            retries: 3
-            start_period: 40s
+  vue-app:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    image: vue-project:latest
+    container_name: vue-app
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    labels:
+      - 'com.dockploy.enabled=true'
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Servidor SMTP + interfaz web para capturar correos en desarrollo
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mailhog
+    ports:
+      - '1025:1025'  # SMTP
+      - '8025:8025'  # Web UI
+    restart: unless-stopped
+
+  # Backend ligero de email (Express + Nodemailer) que envía a MailHog
+  email-backend:
+    build:
+      context: ./server
+    container_name: email-backend
+    environment:
+      - PORT=4000
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+    ports:
+      - '4000:4000'
+    depends_on:
+      - mailhog
+    restart: unless-stopped
